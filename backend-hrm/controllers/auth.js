@@ -7,7 +7,11 @@ const notificationsUtil = require('../utils/notifications');
 const { sendWelcomeTrialEmail, sendPasswordResetOtpEmail, sendPasswordChangedConfirmationEmail } = require('../utils/emailService');
 
 exports.login = async (req, res) => {
-    console.log('Login attempt:', req.body);
+    // Security: never log req.body directly — it contains the plaintext password.
+    console.log('Login attempt:', {
+        identifier: (req.body && (req.body.email || req.body.userId)) || null,
+        role: (req.body && req.body.role) || null
+    });
     const { email, userId, password } = req.body;
     const identifier = email || userId;
 
@@ -16,8 +20,6 @@ exports.login = async (req, res) => {
     }
 
     try {
-        console.log('--- LOGIN DEBUG START ---');
-        console.log('Identifier received:', identifier);
         
         // Comprehensive search: Check User Email, Employee Email, Custom Employee ID, Machine ID, or Employee Database ID
         let [users] = await db.execute(`
@@ -81,9 +83,7 @@ exports.login = async (req, res) => {
         });
 
         // Password comparison
-        console.log('Comparing password for:', user.email || `EMP-${user.employee_db_id}`);
         const isMatch = await bcrypt.compare(password, user.password);
-        console.log('Password match result:', isMatch);
         if (!isMatch) {
             return res.status(401).json({ message: 'Invalid credentials (Password mismatch)' });
         }
@@ -486,6 +486,13 @@ exports.getSetupStatus = async (req, res) => {
         let isLicensed = false;
         if (licenseCache && typeof licenseCache.getState === 'function') {
             const state = await licenseCache.getState(req.licenseHost || null);
+            if (state && state.status === 'STATUS_STORAGE_UNAVAILABLE') {
+                return res.status(503).json({
+                    success: false,
+                    code: 'LICENSE_STORAGE_FAILURE',
+                    message: 'License storage engine is temporarily unavailable. Please retry shortly.'
+                });
+            }
             isLicensed = Boolean(state && state.valid && state.status === 'STATUS_HEALTHY');
         }
 
