@@ -143,23 +143,23 @@ const ActivateLicense = () => {
       return;
     }
 
-    let payload;
-    try {
-      // Check if it's already a JSON envelope
-      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-        payload = JSON.parse(trimmed);
-      } else {
-        payload = trimmed;
+    // Backend contract: JSON object goes in `envelope`; Base64 armored text goes in `licenseKey`
+    let requestBody;
+    if (trimmed.startsWith('{')) {
+      try {
+        requestBody = { envelope: JSON.parse(trimmed) };
+      } catch {
+        setActivationError('The license file content is not valid JSON. Please verify the .lic file has not been modified.');
+        return;
       }
-    } catch {
-      payload = trimmed;
+    } else {
+      requestBody = { licenseKey: trimmed };
     }
 
+    if (isActivating) return;
     setIsActivating(true);
     try {
-      const res = await api.post('/license/activate', {
-        envelope: payload
-      });
+      const res = await api.post('/license/activate', requestBody);
 
       if (res.data?.success) {
         setActivationSuccess(true);
@@ -187,12 +187,14 @@ const ActivateLicense = () => {
         setActivationError(
           'Commercial purchase key detected. Direct online activation is not yet available in offline mode. Please upload or paste your signed .lic envelope.'
         );
-      } else if (serverCode === 'INVALID_SIGNATURE') {
-        setActivationError('Cryptographic verification failed: Invalid or tampered signature envelope.');
-      } else if (serverCode === 'DOMAIN_MISMATCH') {
-        setActivationError('Domain mismatch: This license is not issued for the current host domain.');
-      } else if (serverCode === 'PRODUCT_MISMATCH') {
-        setActivationError('Product mismatch: This license was issued for a different product.');
+      } else if (serverCode === 'LICENSE_TAMPERED' || serverCode === 'UNKNOWN_KEY_ID' || serverCode === 'REVOKED_KEY') {
+        setActivationError('Cryptographic verification failed: the license signature is invalid, untrusted, or tampered.');
+      } else if (serverCode === 'LICENSE_DOMAIN_MISMATCH') {
+        setActivationError('Domain mismatch: this license was not issued for the current host domain.');
+      } else if (serverCode === 'LICENSE_PRODUCT_MISMATCH') {
+        setActivationError('Product mismatch: this license was issued for a different product.');
+      } else if (serverCode === 'UNAUTHORIZED' || serverCode === 'INVALID_TOKEN' || serverCode === 'TOKEN_EXPIRED' || serverCode === 'SUPERADMIN_REQUIRED') {
+        setActivationError('This installation already has a license record. Re-activation or recovery requires a signed-in Super Administrator.');
       } else {
         setActivationError(serverMsg || 'License activation failed. Please check the envelope and try again.');
       }
@@ -465,7 +467,7 @@ const ActivateLicense = () => {
                       setEnvelopeText(e.target.value);
                       checkForKeyPattern(e.target.value);
                     }}
-                    placeholder={`{"signature": "...", "payload": {...}}\nOR\n-----BEGIN KIAAN LICENSE ENVELOPE-----`}
+                    placeholder={`{"algorithm": "Ed25519", "key_id": "...", "payload": {...}, "signature": "..."}\n\nor the Base64-encoded envelope text`}
                     className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs font-mono text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 resize-none"
                   />
                 </div>

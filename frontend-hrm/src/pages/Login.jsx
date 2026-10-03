@@ -38,6 +38,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [licenseChecking, setLicenseChecking] = useState(true);
   const [licenseError, setLicenseError] = useState('');
+  const [licenseBlocking, setLicenseBlocking] = useState(false);
 
   // States for Enquiry
   const [showEnquiryModal, setShowEnquiryModal] = useState(false);
@@ -63,14 +64,27 @@ const Login = () => {
     let isMounted = true;
     const checkLicensePreflight = async () => {
       try {
-        const res = await api.get('/setup/status');
+        const licRes = await api.get('/license/status');
         if (!isMounted) return;
-        if (res.data && res.data.isLicensed === false) {
-          navigate('/activate');
+        const lic = licRes.data || {};
+
+        if (lic.licensed !== true) {
+          if (lic.status === 'STATUS_UNLICENSED') {
+            // Fresh installation: send to offline activation
+            navigate('/activate', { replace: true });
+            return;
+          }
+          // Degraded (corrupted / domain mismatch / conflict): keep login available
+          // so an existing Superadmin can sign in and perform authorized recovery.
+          setLicenseError(lic.message || 'The installed license requires Super Administrator attention.');
+          setLicenseChecking(false);
           return;
         }
-        if (res.data && res.data.setupRequired === true) {
-          navigate('/activate');
+
+        const setupRes = await api.get('/setup/status');
+        if (!isMounted) return;
+        if (setupRes.data && setupRes.data.setupRequired === true) {
+          navigate('/activate', { replace: true });
           return;
         }
         setLicenseChecking(false);
@@ -79,6 +93,7 @@ const Login = () => {
         console.error('License preflight check failed:', err);
         const errorMsg = err.response?.data?.message || 'License service temporarily unavailable. Please retry shortly.';
         setLicenseError(errorMsg);
+        setLicenseBlocking(true);
         setLicenseChecking(false);
       }
     };
@@ -368,7 +383,9 @@ const Login = () => {
                     <p className="text-xs font-bold leading-relaxed">{licenseError}</p>
                   </div>
                   <p className="text-[11px] text-slate-400">
-                    System license validation is required before login. Please contact your system administrator.
+                    {licenseBlocking
+                      ? 'System license validation is required before login. Please retry shortly or contact your system administrator.'
+                      : 'Only a Super Administrator can sign in to perform license recovery.'}
                   </p>
                 </motion.div>
               )}
@@ -434,7 +451,7 @@ const Login = () => {
               <div className="pt-2">
                 <button 
                   type="submit" 
-                  disabled={loading || licenseChecking || Boolean(licenseError)} 
+                  disabled={loading || licenseChecking || licenseBlocking} 
                   className="w-full bg-gradient-to-r from-primary via-indigo-600 to-purple-600 hover:from-primary-dark hover:to-purple-700 text-white rounded-xl py-3.5 sm:py-4 text-xs sm:text-sm font-black uppercase tracking-[0.15em] shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none flex justify-center items-center gap-2 cursor-pointer"
                 >
                   {loading ? (
