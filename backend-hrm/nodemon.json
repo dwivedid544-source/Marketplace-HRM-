@@ -1,0 +1,28 @@
+{
+  "verbose": false,
+  "ignore": [
+    "sessions/*",
+    "sessions/**",
+    "uploads/*",
+    "uploads/**",
+    "backups/*",
+    "backups/**",
+    "scratch/*",
+    "scratch/**",
+    "node_modules/**",
+    "*.log"
+  ],
+  "watch": [
+    "server.js",
+    "controllers/**",
+    "routes/**",
+    "services/**",
+    "middleware/**",
+    "config/**",
+    "cron/**",
+    "utils/**",
+    "policies/**",
+    "prompts/**"
+  ],
+  "ext": "js,json,env"
+}
