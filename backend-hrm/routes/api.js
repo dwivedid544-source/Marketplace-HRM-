@@ -3,6 +3,7 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const subscriptionGuard = require('../middleware/subscriptionGuard');
 const { adminOnly } = require('../middleware/roleGuard');
+const { requireFeature, requireEdition, enforceEmployeeLimit } = require('../kiaan-license/middleware/entitlementGuard');
 const employeeController = require('../controllers/employee');
 const attendanceController = require('../controllers/attendance');
 const profileController = require('../controllers/profile');
@@ -83,7 +84,7 @@ router.delete('/plan/:id', auth, settingsController.deletePlan);
 router.get('/employees/next-ids', auth, subscriptionGuard, employeeController.getNextIds);
 router.get('/employees', auth, subscriptionGuard, employeeController.getAllEmployees);
 router.get('/employees/:id', auth, subscriptionGuard, employeeController.getEmployeeById);
-router.post('/employees', auth, subscriptionGuard, adminOnly, upload.single('profileImage'), employeeController.addEmployee);
+router.post('/employees', auth, subscriptionGuard, adminOnly, enforceEmployeeLimit(), upload.single('profileImage'), employeeController.addEmployee);
 router.put('/employees/:id', auth, subscriptionGuard, adminOnly, upload.single('profileImage'), employeeController.updateEmployee);
 router.delete('/employees/:id', auth, subscriptionGuard, adminOnly, employeeController.deleteEmployee);
 router.post('/employees/:id/reset-password', auth, subscriptionGuard, adminOnly, employeeController.adminResetPassword);
@@ -91,18 +92,18 @@ router.post('/employees/:id/reset-password', auth, subscriptionGuard, adminOnly,
 
 
 // Attendance (Admin-only for mutations, punch for all staff)
-router.get('/attendance', auth, subscriptionGuard, attendanceController.getAttendance);
-router.post('/attendance/punch', auth, subscriptionGuard, attendanceController.punchAttendance);
-router.delete('/attendance/reset', auth, subscriptionGuard, adminOnly, attendanceController.resetAttendance);
-router.post('/attendance/manual', auth, subscriptionGuard, adminOnly, attendanceController.addManualAttendance);
-router.post('/attendance/bulk', auth, subscriptionGuard, adminOnly, attendanceController.bulkMarkAttendance);
-router.get('/attendance/stats', auth, subscriptionGuard, attendanceController.getDashboardStats);
-router.get('/stats/dashboard', auth, subscriptionGuard, attendanceController.getDashboardStats);
-router.get('/attendance/holidays', auth, subscriptionGuard, attendanceController.getPublicHolidays);
-router.post('/attendance/holidays', auth, subscriptionGuard, adminOnly, attendanceController.addPublicHoliday);
-router.delete('/attendance/holidays/:id', auth, subscriptionGuard, adminOnly, attendanceController.deletePublicHoliday);
-router.put('/attendance/:id', auth, subscriptionGuard, adminOnly, attendanceController.updateAttendance);
-router.delete('/attendance/:id', auth, subscriptionGuard, adminOnly, attendanceController.deleteAttendance);
+router.get('/attendance', auth, subscriptionGuard, requireFeature('ATTENDANCE'), attendanceController.getAttendance);
+router.post('/attendance/punch', auth, subscriptionGuard, requireFeature('ATTENDANCE'), attendanceController.punchAttendance);
+router.delete('/attendance/reset', auth, subscriptionGuard, adminOnly, requireFeature('ATTENDANCE'), attendanceController.resetAttendance);
+router.post('/attendance/manual', auth, subscriptionGuard, adminOnly, requireFeature('ATTENDANCE'), attendanceController.addManualAttendance);
+router.post('/attendance/bulk', auth, subscriptionGuard, adminOnly, requireFeature('ATTENDANCE'), attendanceController.bulkMarkAttendance);
+router.get('/attendance/stats', auth, subscriptionGuard, requireFeature('ATTENDANCE'), attendanceController.getDashboardStats);
+router.get('/stats/dashboard', auth, subscriptionGuard, requireFeature('ATTENDANCE'), attendanceController.getDashboardStats);
+router.get('/attendance/holidays', auth, subscriptionGuard, requireFeature('ATTENDANCE'), attendanceController.getPublicHolidays);
+router.post('/attendance/holidays', auth, subscriptionGuard, adminOnly, requireFeature('ATTENDANCE'), attendanceController.addPublicHoliday);
+router.delete('/attendance/holidays/:id', auth, subscriptionGuard, adminOnly, requireFeature('ATTENDANCE'), attendanceController.deletePublicHoliday);
+router.put('/attendance/:id', auth, subscriptionGuard, adminOnly, requireFeature('ATTENDANCE'), attendanceController.updateAttendance);
+router.delete('/attendance/:id', auth, subscriptionGuard, adminOnly, requireFeature('ATTENDANCE'), attendanceController.deleteAttendance);
 
 // Settings (Admin-only for mutations)
 router.get('/settings/global', auth, settingsController.getGlobalSettings);
@@ -116,7 +117,7 @@ router.post('/settings/change-password', auth, settingsController.changePassword
 
 // Face Recognition
 const faceRoutes = require('./face.routes');
-router.use('/face', faceRoutes);
+router.use('/face', requireFeature('BIOMETRIC_HARDWARE_SDK'), faceRoutes);
 
 // Chatbot (Public & Authenticated context passed in body)
 const chatbotController = require('../controllers/chatbot.controller');
@@ -124,19 +125,19 @@ router.post('/assistant', auth, chatbotController.handleMessage);
 
 // Leaves
 const leaveController = require('../controllers/leave.controller');
-router.get('/leaves/balances', auth, subscriptionGuard, leaveController.getLeaveBalances);
-router.get('/leaves', auth, subscriptionGuard, leaveController.getLeaves);
-router.post('/leaves', auth, subscriptionGuard, upload.single('attachment'), leaveController.applyLeave);
-router.put('/leaves/:id', auth, subscriptionGuard, adminOnly, leaveController.updateLeaveStatus);
-router.delete('/leaves/clear', auth, subscriptionGuard, adminOnly, leaveController.clearLeaveHistory);
+router.get('/leaves/balances', auth, subscriptionGuard, requireFeature('LEAVES'), leaveController.getLeaveBalances);
+router.get('/leaves', auth, subscriptionGuard, requireFeature('LEAVES'), leaveController.getLeaves);
+router.post('/leaves', auth, subscriptionGuard, requireFeature('LEAVES'), upload.single('attachment'), leaveController.applyLeave);
+router.put('/leaves/:id', auth, subscriptionGuard, adminOnly, requireFeature('LEAVES'), leaveController.updateLeaveStatus);
+router.delete('/leaves/clear', auth, subscriptionGuard, adminOnly, requireFeature('LEAVES'), leaveController.clearLeaveHistory);
 
 // GeoFencing (Admin-only for mutations)
 const geofenceController = require('../controllers/geofence.controller');
-router.get('/geofences/assigned', auth, subscriptionGuard, geofenceController.getAssignedGeofence);
-router.get('/geofences', auth, subscriptionGuard, geofenceController.getGeofences);
-router.post('/geofences', auth, subscriptionGuard, adminOnly, geofenceController.createGeofence);
-router.put('/geofences/:id', auth, subscriptionGuard, adminOnly, geofenceController.updateGeofence);
-router.delete('/geofences/:id', auth, subscriptionGuard, adminOnly, geofenceController.deleteGeofence);
+router.get('/geofences/assigned', auth, subscriptionGuard, requireFeature('GEO_FENCING'), geofenceController.getAssignedGeofence);
+router.get('/geofences', auth, subscriptionGuard, requireFeature('GEO_FENCING'), geofenceController.getGeofences);
+router.post('/geofences', auth, subscriptionGuard, adminOnly, requireFeature('GEO_FENCING'), geofenceController.createGeofence);
+router.put('/geofences/:id', auth, subscriptionGuard, adminOnly, requireFeature('GEO_FENCING'), geofenceController.updateGeofence);
+router.delete('/geofences/:id', auth, subscriptionGuard, adminOnly, requireFeature('GEO_FENCING'), geofenceController.deleteGeofence);
 
 // Claims
 const claimController = require('../controllers/claim.controller');
@@ -154,12 +155,12 @@ router.delete('/kpis/:id', auth, subscriptionGuard, adminOnly, kpiController.del
 
 // Payroll (Admin-only for generation)
 const payrollController = require('../controllers/payroll.controller');
-router.get('/payroll/live-accrual', auth, subscriptionGuard, payrollController.getLiveAccrual);
-router.get('/payroll', auth, subscriptionGuard, payrollController.getPayroll);
-router.post('/payroll/generate', auth, subscriptionGuard, adminOnly, payrollController.generatePayroll);
-router.post('/payroll/:id/generate-pdf', auth, subscriptionGuard, payrollController.generateSinglePdf);
-router.patch('/payroll/:id', auth, subscriptionGuard, adminOnly, payrollController.updateStatus);
-router.delete('/payroll/:id', auth, subscriptionGuard, adminOnly, payrollController.deletePayroll);
+router.get('/payroll/live-accrual', auth, subscriptionGuard, requireFeature('PAYROLL'), payrollController.getLiveAccrual);
+router.get('/payroll', auth, subscriptionGuard, requireFeature('PAYROLL'), payrollController.getPayroll);
+router.post('/payroll/generate', auth, subscriptionGuard, adminOnly, requireFeature('PAYROLL'), payrollController.generatePayroll);
+router.post('/payroll/:id/generate-pdf', auth, subscriptionGuard, requireFeature('PAYROLL'), payrollController.generateSinglePdf);
+router.patch('/payroll/:id', auth, subscriptionGuard, adminOnly, requireFeature('PAYROLL'), payrollController.updateStatus);
+router.delete('/payroll/:id', auth, subscriptionGuard, adminOnly, requireFeature('PAYROLL'), payrollController.deletePayroll);
 
 // Email Settings
 router.get('/settings/email', auth, adminOnly, emailSettingsController.getEmailSettings);
@@ -169,10 +170,10 @@ router.patch('/settings/email/toggle', auth, adminOnly, emailSettingsController.
 router.post('/settings/email/test', auth, adminOnly, emailSettingsController.testEmailConnection);
 
 // Email Queue
-router.post('/payroll/send-emails', auth, adminOnly, emailQueueController.queueEmails);
-router.get('/payroll/email-progress-stream', auth, adminOnly, emailQueueController.emailProgressStream);
-router.get('/payroll/email-logs', auth, adminOnly, emailQueueController.getEmailLogs);
-router.post('/payroll/retry-emails', auth, adminOnly, emailQueueController.retryEmails);
+router.post('/payroll/send-emails', auth, adminOnly, requireFeature('PAYROLL'), emailQueueController.queueEmails);
+router.get('/payroll/email-progress-stream', auth, adminOnly, requireFeature('PAYROLL'), emailQueueController.emailProgressStream);
+router.get('/payroll/email-logs', auth, adminOnly, requireFeature('PAYROLL'), emailQueueController.getEmailLogs);
+router.post('/payroll/retry-emails', auth, adminOnly, requireFeature('PAYROLL'), emailQueueController.retryEmails);
 
 // Kiosk
 const kioskController = require('../controllers/kiosk.controller');

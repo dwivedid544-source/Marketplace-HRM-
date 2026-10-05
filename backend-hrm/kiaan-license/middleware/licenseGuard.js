@@ -41,8 +41,9 @@ const PUBLIC_ROUTES = Object.freeze([
     { method: 'POST', path: '/api/login' },
     { method: 'POST', path: '/api/public/forgot-password-request' },
     { method: 'POST', path: '/api/public/reset-password-verify' },
-    // Public license ping
+    // Public license ping & entitlements
     { method: 'GET', path: '/api/license/status' },
+    { method: 'GET', path: '/api/license/entitlements' },
     // Public setup status and first-admin initialization
     { method: 'GET', path: '/api/setup/status' },
     { method: 'POST', path: '/api/setup/first-admin' },

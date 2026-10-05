@@ -25,6 +25,7 @@ const { reconcileVaults, persistEntitlement, VaultStatus, WriteStatus } = requir
 const { CacheStatus } = require('../core/licenseCache');
 const { resolveHost } = require('../core/hostResolver');
 const { licenseConfig: defaultLicenseConfig } = require('../config/licenseConfig');
+const { evaluateLicenseEntitlement } = require('../core/entitlementEvaluator');
 
 /**
  * Maximum permitted size for an activation payload (64 KB).
@@ -138,6 +139,52 @@ function createLicenseController(options = {}) {
                 success: false,
                 code: 'INTERNAL_ERROR',
                 message: 'Unable to retrieve license status.'
+            });
+        }
+    }
+
+    /**
+     * GET /api/license/entitlements
+     * Returns sanitized active commercial license entitlements (edition, features, employee limit).
+     * Never exposes private keys, signatures, seeds, peppers, or internal storage paths.
+     */
+    async function getEntitlements(req, res) {
+        try {
+            const hostContext = getHostContext(req, config);
+            const state = await licenseCache.getState(hostContext);
+
+            const evaluation = evaluateLicenseEntitlement({ licenseState: state });
+
+            if (!evaluation.allowed) {
+                return res.status(200).json({
+                    success: false,
+                    licensed: false,
+                    status: state.status,
+                    code: evaluation.code,
+                    reason: evaluation.reason,
+                    entitlements: null
+                });
+            }
+
+            return res.status(200).json({
+                success: true,
+                licensed: true,
+                status: state.status,
+                entitlements: {
+                    productId: evaluation.license.productId,
+                    editionCode: evaluation.license.editionCode,
+                    editionName: (evaluation.license.editionCode || '').toUpperCase(),
+                    sku: evaluation.license.sku,
+                    licensedDomain: evaluation.license.licensedDomain,
+                    maxEmployees: evaluation.license.maxEmployees,
+                    features: evaluation.license.features
+                }
+            });
+        } catch {
+            return res.status(500).json({
+                success: false,
+                code: 'INTERNAL_ERROR',
+                message: 'Unable to retrieve license entitlements.'
             });
         }
     }
@@ -564,6 +611,7 @@ function createLicenseController(options = {}) {
 
     return Object.freeze({
         getStatus,
+        getEntitlements,
         activate,
         sync,
         recover,

@@ -136,8 +136,9 @@ function createLicenseRouter(options = {}) {
         return requireSuperAdmin(req, res, next);
     };
 
-    // 1. Minimal Public Status (Public, Unauthenticated)
+    // 1. Minimal Public Status & Entitlements (Public, Unauthenticated)
     router.get('/status', controller.getStatus);
+    router.get('/entitlements', controller.getEntitlements);
 
     // 2. License Activation (Initial activation unauthenticated; re-activation SuperAdmin only)
     router.post('/activate', requireSuperAdminUnlessInitial, controller.activate);

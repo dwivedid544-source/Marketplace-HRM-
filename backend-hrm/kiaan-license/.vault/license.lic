@@ -1,0 +1,38 @@
+{
+  "algorithm": "Ed25519",
+  "key_id": "authority-staging-drill-key-2026",
+  "payload": {
+    "schema_version": "1.0.0",
+    "product_id": "kiaan-hrm",
+    "licensed_domain": "hrm-staging-a.example.invalid",
+    "domain_aliases": [
+      "localhost",
+      "127.0.0.1"
+    ],
+    "sequence_number": 1,
+    "license_id": "LIC-2026-FULL_SOURCE-8EEE4EEA",
+    "edition_code": "full_source",
+    "sku": "KHRM-SRC-LIFETIME",
+    "license_type": "PERPETUAL_COMMERCIAL",
+    "buyer_name": "staging-tester",
+    "buyer_email": "staging-license-test@example.invalid",
+    "entitlements": {
+      "edition_code": "full_source",
+      "has_backend_source": true,
+      "has_extended_features": false,
+      "max_employees": 1000,
+      "features": [
+        "ATTENDANCE",
+        "PAYROLL",
+        "LEAVES",
+        "GEO_FENCING",
+        "FULL_BACKEND_API",
+        "OFFLINE_LICENSING"
+      ],
+      "support_tier": "STANDARD_1YR"
+    },
+    "activated_at": "2026-10-05T11:08:30.987Z",
+    "status": "ACTIVATED"
+  },
+  "signature": "W98OfT/8V7jPrqePbjwsCvxekRdwxmBGwfxcUKrm/5om85P3DjnGdtAlaY51Q9XYDzkoAkctiq8C5hxoat+/Ag=="
+}
