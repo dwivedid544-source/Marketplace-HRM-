@@ -33,30 +33,37 @@ import { motion } from 'framer-motion';
 
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
+import { useLicenseEntitlements } from '../hooks/useLicenseEntitlements';
 
 const Sidebar = ({ type = 'admin', onItemClick }) => {
   const { user, logout } = useAuth();
   const { t } = useSettings();
+  const { hasFeature, entitlements } = useLicenseEntitlements();
   const isMasterAdmin = user?.role?.toLowerCase().includes('master') || user?.role?.toLowerCase() === 'admin';
+
+  const isEntitled = (link) => {
+    if (!link.feature || !entitlements) return true;
+    return hasFeature(link.feature);
+  };
 
   const adminLinks = [
     { name: 'Dashboard', icon: <LayoutDashboard size={18} />, path: '/admin' },
     { name: 'Employees', icon: <Users size={18} />, path: '/admin/employees' },
-    { name: 'Attendance', icon: <CalendarCheck size={18} />, path: '/admin/attendance' },
-    { name: 'Face Register', icon: <Fingerprint size={18} />, path: '/admin/face-registration' },
-    { name: 'Leaves', icon: <CalendarOff size={18} />, path: '/admin/leaves' },
-    { name: 'Geo-Fencing', icon: <MapPin size={18} />, path: '/admin/geofencing', masterOnly: true },
+    { name: 'Attendance', icon: <CalendarCheck size={18} />, path: '/admin/attendance', feature: 'ATTENDANCE' },
+    { name: 'Face Register', icon: <Fingerprint size={18} />, path: '/admin/face-registration', feature: 'BIOMETRIC_HARDWARE_SDK' },
+    { name: 'Leaves', icon: <CalendarOff size={18} />, path: '/admin/leaves', feature: 'LEAVES' },
+    { name: 'Geo-Fencing', icon: <MapPin size={18} />, path: '/admin/geofencing', masterOnly: true, feature: 'GEO_FENCING' },
     { name: 'Claims', icon: <ClipboardList size={18} />, path: '/admin/claims' },
     { name: 'KPI & Goals', icon: <Target size={18} />, path: '/admin/kpi' },
     { name: 'Kiosk Settings', icon: <TabletSmartphone size={18} />, path: '/admin/kiosk-settings', masterOnly: true },
-    { name: 'Payroll', icon: <Wallet size={18} />, path: '/admin/payroll', masterOnly: true },
+    { name: 'Payroll', icon: <Wallet size={18} />, path: '/admin/payroll', masterOnly: true, feature: 'PAYROLL' },
     { name: 'Invoices', icon: <FileText size={18} />, path: '/admin/invoices', masterOnly: true },
     { name: 'Reports', icon: <BarChart3 size={18} />, path: '/admin/reports' },
     { name: 'Audit Logs', icon: <ShieldAlert size={18} />, path: '/admin/audit-logs', masterOnly: true },
     { name: 'Backup & Data', icon: <Database size={18} />, path: '/admin/backup', masterOnly: true },
     { name: 'Settings', icon: <Settings size={18} />, path: '/admin/settings', masterOnly: true },
     { name: 'Profile', icon: <Users size={18} />, path: '/admin/profile' },
-  ].filter(link => !link.masterOnly || isMasterAdmin);
+  ].filter(link => (!link.masterOnly || isMasterAdmin) && isEntitled(link));
 
   const employeeLinks = [
     { name: 'Dashboard', icon: <LayoutDashboard size={18} />, path: '/employee' },
